@@ -3,10 +3,12 @@ import { ChatGroq } from "@langchain/groq"
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import z from "zod"
 import dotenv from "dotenv"
-import { END, MessagesAnnotation, StateGraph } from "@langchain/langgraph";
+import { END, MemorySaver, MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import { createCalendarEvent, deleteCalendarEvent, getCalendarEvents } from "./tool/tools.ts";
+import * as readline from 'readline';
  
 dotenv.config()
+const checkpointer = new MemorySaver();
 
 
  const whereToGoNext=async(state)=>{
@@ -42,18 +44,34 @@ const graph=new StateGraph(MessagesAnnotation)
 })
 .addEdge("tools", "callModel")
 
-const agent=graph.compile()
+const agent=graph.compile({ checkpointer })
 
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
 async function main()
 {
+      const systemMessage = `You are a calendar assistant. Use the provided tools to handle user queries about calendar events. After using a tool, provide a clear final response to the user and treat time in localtimezone.
+             date and time is :${new Date().toISOString().split('.')[0]}
+             time zone is : ${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
+             while (true) {
+    const userInput = await new Promise<string>((resolve) => {
+      rl.question('Enter your query (or "bye" to exit): ', resolve);
+    });
+
+    if (userInput.toLowerCase() === 'bye') {
+      console.log('Goodbye!');
+      rl.close();
+      break;
+    }
     const response=await agent.invoke({
         messages:[
-            {role: "system", content: `You are a calendar assistant. Use the provided tools to handle user queries about calendar events. After using a tool, provide a clear final response to the user and treat time in localtimezone.
-             date and time is :${new Date().toISOString().split('.')[0]}
-             time zone is : ${Intl.DateTimeFormat().resolvedOptions().timeZone}`},
-            {role:"user", content:"   do i have meeting with this guys today(shreyassingri@gmail.com)    "},
+            {role: "system", content:  systemMessage},
+            {role:"user", content:userInput},
         ]
-    }, { recursionLimit: 50 })
-    console.log('result',response.messages[response.messages.length-1].content)
+    },{configurable: { thread_id: "1" },recursionLimit: 50})
+    console.log('Assistant:', response.messages[response.messages.length-1].content)
+}
 }
 main()
