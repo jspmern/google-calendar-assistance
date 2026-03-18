@@ -6,9 +6,22 @@ import dotenv from "dotenv"
 import { END, MemorySaver, MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import { createCalendarEvent, deleteCalendarEvent, getCalendarEvents } from "./tool/tools.ts";
 import * as readline from 'readline';
+import { CallbackHandler } from "@langfuse/langchain";
+import { NodeSDK } from "@opentelemetry/sdk-node";
+import { LangfuseSpanProcessor } from "@langfuse/otel";
+ dotenv.config()
+const sdk = new NodeSDK({
+  spanProcessors: [new LangfuseSpanProcessor()],
+});
  
-dotenv.config()
+sdk.start();
 const checkpointer = new MemorySaver();
+// Initialize the Langfuse CallbackHandler
+const langfuseHandler = new CallbackHandler({
+  sessionId: "user-session-123",
+  userId: "user-abc",
+  tags: ["langchain-test"],
+});
 
 
  const whereToGoNext=async(state)=>{
@@ -52,6 +65,7 @@ const rl = readline.createInterface({
 });
 async function main()
 {
+
       const systemMessage = `You are a calendar assistant. Use the provided tools to handle user queries about calendar events. After using a tool, provide a clear final response to the user and treat time in localtimezone.
              date and time is :${new Date().toISOString().split('.')[0]}
              time zone is : ${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
@@ -70,7 +84,7 @@ async function main()
             {role: "system", content:  systemMessage},
             {role:"user", content:userInput},
         ]
-    },{configurable: { thread_id: "1" },recursionLimit: 50})
+    },{configurable: { thread_id: "1" },recursionLimit: 50,callbacks: [langfuseHandler] })
     console.log('Assistant:', response.messages[response.messages.length-1].content)
 }
 }
