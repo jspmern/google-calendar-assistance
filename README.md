@@ -669,6 +669,229 @@ if (state.messages.length > 100) {
 - **Token Expiration**: Use the authentication manager for automatic token refresh.
 - **Invalid Parameters**: Check Zod validation errors in LangSmith traces.
 
+
+
+## 🚀 Why We Use Langfuse
+
+This project integrates **Langfuse** to **monitor, debug, and analyze** our AI agent built using **LangGraph**.
+
+### ✅ Purpose
+
+Langfuse helps us:
+
+* Track **user requests (traces)**
+* Monitor **LLM calls (generations)**
+* Debug **tool usage & agent flow**
+* Measure **latency & performance**
+* Analyze **token usage & cost**
+
+👉 Without Langfuse → debugging AI is guesswork
+👉 With Langfuse → full visibility of execution
+
+---
+
+## 🧠 Key Concepts
+
+| Concept    | Meaning              |
+| ---------- | -------------------- |
+| Trace      | Full user request    |
+| Span       | Step inside workflow |
+| Generation | LLM call             |
+
+---
+
+## ⚙️ Why Langfuse Instead of Only LangSmith?
+
+### Comparison
+
+| Feature               | LangSmith      | Langfuse      |
+| --------------------- | -------------- | ------------- |
+| Best for              | LangChain apps | Any AI system |
+| Open Source           | ❌              | ✅             |
+| Self-hosting          | ❌              | ✅             |
+| Production Monitoring | Good           | Excellent     |
+| Flexibility           | Limited        | High          |
+
+---
+
+## 🧩 Why We Chose Langfuse
+
+* Works with **custom LangGraph workflows**
+* Supports **OpenTelemetry (OTEL)**
+* Enables **production-grade monitoring**
+* Can be **self-hosted**
+* Tracks **entire agent lifecycle**
+
+---
+
+## 🛠️ Langfuse Integration in This Project
+
+We use **two methods together**:
+
+### 1️⃣ OpenTelemetry (Automatic Tracing)
+
+```js
+import { NodeSDK } from "@opentelemetry/sdk-node";
+import { LangfuseSpanProcessor } from "@langfuse/otel";
+
+const sdk = new NodeSDK({
+  spanProcessors: [new LangfuseSpanProcessor()],
+});
+
+sdk.start();
+```
+
+### What this does:
+
+* Automatically captures:
+
+  * function execution
+  * async operations
+  * internal spans
+* Sends all traces to Langfuse
+
+---
+
+### 2️⃣ LangChain Callback Handler
+
+```js
+import { CallbackHandler } from "@langfuse/langchain";
+
+const langfuseHandler = new CallbackHandler({
+  sessionId: "user-session-123",
+  userId: "user-abc",
+  tags: ["langchain-test"],
+});
+```
+
+### What this does:
+
+* Tracks:
+
+  * LLM calls
+  * tool usage
+  * prompts & responses
+* Links everything to a **user session**
+
+---
+
+## 🔗 Where It Is Used in Code
+
+```js
+const response = await agent.invoke(
+  {
+    messages: [
+      { role: "system", content: systemMessage },
+      { role: "user", content: userInput },
+    ],
+  },
+  {
+    configurable: { thread_id: "1" },
+    recursionLimit: 50,
+    callbacks: [langfuseHandler], // 👈 important
+  }
+);
+```
+
+### Explanation
+
+* `callbacks: [langfuseHandler]`
+
+  * Sends all LangChain/LangGraph events to Langfuse
+
+* `thread_id`
+
+  * Groups conversation into one trace
+
+* `recursionLimit`
+
+  * Prevents infinite loops in agent
+
+---
+
+## 🔄 What Gets Tracked
+
+For each user query:
+
+```text
+Trace (User Request)
+ ├── LLM Call (Generation)
+ ├── Tool Call (Span)
+ ├── Tool Response
+ └── Final Answer
+```
+
+---
+
+## 📊 What You See in Langfuse Dashboard
+
+* ✅ Full request traces
+* ✅ Tool execution flow
+* ✅ Prompt & response logs
+* ✅ Latency per step
+* ✅ Token usage
+* ✅ Errors
+
+---
+
+## 📈 Example Flow (This Project)
+
+```text
+User Input
+   ↓
+callModel (LLM)
+   ↓
+Tool Decision
+   ↓
+Tool Execution
+   ↓
+LLM Final Response
+```
+
+👉 Every step is tracked as an **observation**
+
+---
+
+## 🎯 Advantages of Langfuse
+
+* 🔍 Deep debugging of AI workflows
+* ⚡ Performance monitoring (latency)
+* 💰 Cost tracking (tokens)
+* 🧠 Better prompt optimization
+* 🏗 Works with any architecture
+* 🔐 Self-hosting support
+
+---
+
+## 🧠 Summary
+
+```text
+LangSmith → Debug LangChain apps
+Langfuse → Monitor & scale AI systems
+```
+
+👉 In this project, Langfuse helps us:
+
+* understand agent behavior
+* debug tool calls
+* improve performance
+
+---
+
+## 📌 Final Note
+
+Langfuse is essential for **production AI systems**, especially when using:
+
+* custom agents
+* LangGraph workflows
+* tool-based architectures
+
+---
+
+
+
+
+
 ## Contributing
 
 Contributions are welcome! Fork the repo, make changes, and submit a pull request. Ensure code follows TypeScript best practices and includes tests.
